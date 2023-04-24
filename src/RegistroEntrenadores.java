@@ -1,5 +1,4 @@
 
-
 import java.awt.Color;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -11,116 +10,155 @@ import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import oracle.jdbc.OracleTypes;
 
-public class Registro_clientes extends javax.swing.JFrame {
+public class RegistroEntrenadores extends javax.swing.JFrame {
+
     public static Connection con = null;
-    public static ResultSet rs =null;
-    public static Statement st =null;
-    public static CallableStatement stm=null;
+    public static ResultSet rs = null;
+    public static Statement st = null;
+    public static CallableStatement stm = null;
+
+    public void Conectar() {
+        try {
+            con = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:XE", "System", "Hnevey70");
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(null, "Error al conectar a la base de datos!" + ex.getMessage());
+        }
+    }
+
+    //Cargar los entrenadores de la base de datos
+    public ArrayList<Entrenador> ListaEntrenador() {
+        ArrayList<Entrenador> Arrayentrenador = new ArrayList();
+        try {
+            Conectar();
+            stm = con.prepareCall("{call PK_GENERAL.SP_LISTAENTRENADORES(?)}");
+            stm.registerOutParameter(1, OracleTypes.CURSOR);
+            stm.execute();
+
+            rs = (ResultSet) stm.getObject(1);
+
+            while (rs.next()) {
+                Entrenador entrenador = new Entrenador();
+
+                entrenador.setIdEntrenador(rs.getInt(1));
+                entrenador.setNombre(rs.getString(2));
+                entrenador.setApellidos(rs.getString(3));
+                entrenador.setCorreo(rs.getString(4));
+                entrenador.setPuesto(rs.getString(5));
+
+                Arrayentrenador.add(entrenador);
+
+            }
+            rs.close();
+            con.close();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(null, "Error al conectar a la base de datosx!" + ex.getMessage());
+        }
+        return Arrayentrenador;
+    }
+
+    public void llenarCombo() {
+        try {
+            Conectar();
+            Statement st;
+            
+            //Llena las cedulas
+            stm = con.prepareCall("{call PK_GENERAL.SP_LISTAPUESTOSCOMBO(?)}");
+            stm.registerOutParameter(1, OracleTypes.CURSOR);
+            stm.execute();
+
+            rs = (ResultSet) stm.getObject(1);
+
+            while (rs.next()) {
+                comboPuesto.addItem(rs.getString(1));
+
+            }
+            rs.close();
+            con.close();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(null, "Error en la ejecución!" + ex.getMessage());
+
+        }
+
+    }
+
+    //Llenado de la tabla
+    public void llenarTabla() {
+        ArrayList<Entrenador> Lisentre = ListaEntrenador();
+        DefaultTableModel tb = (DefaultTableModel) jTable2.getModel();
+
+        for (Entrenador c1 : Lisentre) {
+            tb.addRow(new Object[]{c1.getIdEntrenador(), c1.getNombre(), c1.getApellidos(), c1.getCorreo(), c1.getPuesto()});
+        }
+    }
+
+    //Registrar Nuevo ENTRENADOR
+    public void insertarEntrenador(){
+       
+       try{
+        Conectar();
+        stm= con.prepareCall("{call PK_GENERAL.SP_REGISTROENTRENADOR (?,?,?,?)}");
+        
+        stm.setString(1,nombretxt.getText());
+        stm.setString(2, apellidotxt.getText());
+        stm.setString(3, correotxt.getText());
+        stm.setString(4, comboPuesto.getSelectedItem().toString());
+        
+        
+        stm.executeUpdate();
+        
+        con.close();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(null, "Error al conectar a la base de datos!" + ex.getMessage());
+        }
+    }
+    
+    
+    
+    public void actualizarEntrenador(){
+        
+        int fila=jTable2.getSelectedRow();
+          int valorId= Integer.parseInt(jTable2.getValueAt(fila,0).toString());
+         
+          
+         if( JOptionPane.showConfirmDialog(null, "Desea actualizar la información #"+valorId, "Actualizar",
+            JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+              try{ 
+                Conectar();
+                    stm= con.prepareCall("{call PK_GENERAL.SP_ACTUALIZARENTRENADOR(?,?,?,?,?)}");
+                    stm.setInt(1,valorId);
+                    stm.setString(2,nombretxt.getText());
+                    stm.setString(3, apellidotxt.getText());
+                    stm.setString(4,correotxt.getText());
+                    stm.setString(5, comboPuesto.getSelectedItem().toString());
+                    
+                    stm.execute();
+                    JOptionPane.showMessageDialog(null,"ACtualización con Exito","Eliminado",JOptionPane.INFORMATION_MESSAGE);
+
+
+                    rs.close();
+                    con.close();
+                } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(null, "Error en la ejecución!" + ex.getMessage());
+
+                }
+         }   
+    }
+    
+    
     
 
-   public  void Conectar() {
-        try{
-        con= DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:XE", "System", "Hnevey70");
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Error al conectar a la base de datos!" + ex.getMessage());
-        }
-    }
-   
-   
-   //Cargar los clientes de la base de datos
-   public ArrayList<Cliente> ListaCliente(){
-       ArrayList<Cliente> Arraycliente =new ArrayList();
-        try{
-       Conectar();
-       stm= con.prepareCall("{call PKG_CLIENTE.SP_LISTACLIENTES(?)}");
-       stm.registerOutParameter(1, OracleTypes.CURSOR);
-       stm.execute();
-       
-       rs=(ResultSet) stm.getObject(1);
-       
-       while(rs.next()){
-           Cliente cliente =new Cliente();
-           
-           cliente.setCedula(rs.getString(1));
-           cliente.setNombre(rs.getString(2));
-           cliente.setApellidos(rs.getString(3));
-           cliente.setCorreo(rs.getString(4));
-           cliente.setTelefono(rs.getString(5));
-           
-           Arraycliente.add(cliente);
-           
-       }
-        rs.close();
-        con.close();
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Error al conectar a la base de datos!" + ex.getMessage());
-        }
-       return Arraycliente;
-   }
-   
-   
-   
-   
-   //Llenado de la tabla
-   public void llenarTabla(){
-       ArrayList<Cliente> Liscliente =ListaCliente();
-       DefaultTableModel tb= (DefaultTableModel)jTable2.getModel();
-       
-       for(Cliente c1: Liscliente){
-           tb.addRow(new Object[]{c1.getCedula(),c1.getNombre(), c1.getApellidos(),c1.getCorreo(),c1.getTelefono()});
-       }  
-   }
-   
-   
-   //Registrar Nuevo cliente
-   
-   public void insertarCliente(Cliente cliente){
+ 
+ public void eliminarEntrenador(){
+     int fila=jTable2.getSelectedRow();
+          int valorId= Integer.parseInt(jTable2.getValueAt(fila,0).toString());
+          if( JOptionPane.showConfirmDialog(null, "Desea eliminar el entrenador id: "+valorId, "Eliminar",
+            JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
        
        try{
         Conectar();
-        stm= con.prepareCall("{call PKG_CLIENTE.SP_REGISTROCLIENTE (?,?,?,?,?)}");
+        stm= con.prepareCall("{call PK_GENERAL.SP_ELIMINARENTRENADOR (?)}");
         
-        stm.setString(1, cliente.getCedula());
-        stm.setString(2, cliente.getNombre());
-        stm.setString(3, cliente.getApellidos());
-        stm.setString(4, cliente.getCorreo());
-        stm.setString(5, cliente.getTelefono());
-        
-        stm.executeUpdate();
-        
-        con.close();
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Error al conectar a la base de datos!" + ex.getMessage());
-        }
-    }
-
-   public void actualizarCliente(Cliente cliente){
-       
-       try{
-        Conectar();
-        stm= con.prepareCall("{call PKG_CLIENTE.SP_ACTUALIZARCLIENTE (?,?,?,?,?)}");
-        
-        stm.setString(1, cliente.getCedula());
-        stm.setString(2, cliente.getNombre());
-        stm.setString(3, cliente.getApellidos());
-        stm.setString(4, cliente.getCorreo());
-        stm.setString(5, cliente.getTelefono());
-        
-        stm.executeUpdate();
-        
-        con.close();
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(null, "Error al conectar a la base de datos!" + ex.getMessage());
-        }
-    }
-   
-   public void eliminarCliente(Cliente cliente){
-       
-       try{
-        Conectar();
-        stm= con.prepareCall("{call PKG_CLIENTE.SP_ELIMINARCLIENTE (?)}");
-        
-        stm.setString(1, cliente.getCedula());
+        stm.setInt(1, valorId);
         
         
         stm.executeUpdate();
@@ -129,36 +167,34 @@ public class Registro_clientes extends javax.swing.JFrame {
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(null, "Error con la base de datos!" + ex.getMessage());
         }
+          }
     }
-   
-   
-   
-   
-   
-   public void limpiar(){
-       DefaultTableModel tb= (DefaultTableModel)jTable2.getModel();
-       for(int i=tb.getRowCount()-1;i>=0;i--){
-           tb.removeRow(i);
-       }
-       cedulatxt.setText("Cedula");
-       nombretxt.setText("Nombre");
-       apellidotxt.setText("Apellidos");
-       correotxt.setText("Correo");
-       telefonotxt.setText("Telefono");
-       
-   }
+ 
+    public void limpiar() {
+        DefaultTableModel tb = (DefaultTableModel) jTable2.getModel();
+        for (int i = tb.getRowCount() - 1; i >= 0; i--) {
+            tb.removeRow(i);
+        }
+        
+        nombretxt.setText("Nombre");
+        apellidotxt.setText("Apellidos");
+        correotxt.setText("Correo");
+        comboPuesto.setSelectedIndex(0);
+        
 
-    public Registro_clientes() {
+    }
+
+    public RegistroEntrenadores() {
         initComponents();
         setLocationRelativeTo(null);
         setResizable(false);
         setTitle("Control Clientes");
         //this.jTable1.setModel(modelo);
+        llenarCombo();
         limpiar();
         llenarTabla();
-      
-    }
 
+    }
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -170,16 +206,15 @@ public class Registro_clientes extends javax.swing.JFrame {
         jButton9 = new javax.swing.JButton();
         jScrollPane2 = new javax.swing.JScrollPane();
         jTable2 = new javax.swing.JTable();
-        cedulatxt = new javax.swing.JTextField();
         nombretxt = new javax.swing.JTextField();
         apellidotxt = new javax.swing.JTextField();
-        telefonotxt = new javax.swing.JTextField();
         correotxt = new javax.swing.JTextField();
         jSeparator1 = new javax.swing.JSeparator();
         jLabel6 = new javax.swing.JLabel();
         jButton10 = new javax.swing.JButton();
         jLabel8 = new javax.swing.JLabel();
         jButton11 = new javax.swing.JButton();
+        comboPuesto = new javax.swing.JComboBox<>();
         jToolBar1 = new javax.swing.JToolBar();
         jButton5 = new javax.swing.JButton();
         jButton1 = new javax.swing.JButton();
@@ -221,23 +256,12 @@ public class Registro_clientes extends javax.swing.JFrame {
 
             },
             new String [] {
-                "CEDULA", "NOMBRE", "APELLIDOS", "CORREO", "TELEFONO"
+                "ID", "NOMBRE", "APELLIDOS", "CORREO", "PUESTO"
             }
         ));
         jScrollPane2.setViewportView(jTable2);
 
         jPanel1.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 40, 552, 150));
-
-        cedulatxt.setBackground(new java.awt.Color(102, 102, 102));
-        cedulatxt.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
-        cedulatxt.setForeground(new java.awt.Color(255, 255, 255));
-        cedulatxt.setText("Cedula");
-        cedulatxt.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                cedulatxtMouseClicked(evt);
-            }
-        });
-        jPanel1.add(cedulatxt, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 250, 67, -1));
 
         nombretxt.setBackground(new java.awt.Color(102, 102, 102));
         nombretxt.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
@@ -253,7 +277,7 @@ public class Registro_clientes extends javax.swing.JFrame {
                 nombretxtActionPerformed(evt);
             }
         });
-        jPanel1.add(nombretxt, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 250, 70, -1));
+        jPanel1.add(nombretxt, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 250, 70, -1));
 
         apellidotxt.setBackground(new java.awt.Color(102, 102, 102));
         apellidotxt.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
@@ -264,23 +288,7 @@ public class Registro_clientes extends javax.swing.JFrame {
                 apellidotxtMouseClicked(evt);
             }
         });
-        jPanel1.add(apellidotxt, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 250, 103, -1));
-
-        telefonotxt.setBackground(new java.awt.Color(102, 102, 102));
-        telefonotxt.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
-        telefonotxt.setForeground(new java.awt.Color(255, 255, 255));
-        telefonotxt.setText("Telefono");
-        telefonotxt.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                telefonotxtMouseClicked(evt);
-            }
-        });
-        telefonotxt.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                telefonotxtActionPerformed(evt);
-            }
-        });
-        jPanel1.add(telefonotxt, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 250, 80, -1));
+        jPanel1.add(apellidotxt, new org.netbeans.lib.awtextra.AbsoluteConstraints(150, 250, 103, -1));
 
         correotxt.setBackground(new java.awt.Color(102, 102, 102));
         correotxt.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
@@ -291,7 +299,12 @@ public class Registro_clientes extends javax.swing.JFrame {
                 correotxtMouseClicked(evt);
             }
         });
-        jPanel1.add(correotxt, new org.netbeans.lib.awtextra.AbsoluteConstraints(340, 250, 129, -1));
+        correotxt.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                correotxtActionPerformed(evt);
+            }
+        });
+        jPanel1.add(correotxt, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 250, 160, -1));
 
         jSeparator1.setBackground(new java.awt.Color(0, 153, 204));
         jPanel1.add(jSeparator1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 230, 627, 10));
@@ -299,7 +312,7 @@ public class Registro_clientes extends javax.swing.JFrame {
         jLabel6.setBackground(new java.awt.Color(51, 153, 255));
         jLabel6.setFont(new java.awt.Font("Dialog", 0, 18)); // NOI18N
         jLabel6.setForeground(new java.awt.Color(204, 204, 204));
-        jLabel6.setText("Lista De Clientes");
+        jLabel6.setText("Entrenadores");
         jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 10, 240, 30));
 
         jButton10.setBackground(new java.awt.Color(153, 153, 255));
@@ -324,8 +337,8 @@ public class Registro_clientes extends javax.swing.JFrame {
         jLabel8.setBackground(new java.awt.Color(51, 153, 255));
         jLabel8.setFont(new java.awt.Font("Dialog", 0, 18)); // NOI18N
         jLabel8.setForeground(new java.awt.Color(204, 204, 204));
-        jLabel8.setText("Registrar - Eliminar - Actualizar Cliente");
-        jPanel1.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 200, 330, 30));
+        jLabel8.setText("Registrar - Eliminar - Actualizar Entrenador");
+        jPanel1.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 200, 350, 30));
 
         jButton11.setBackground(new java.awt.Color(153, 153, 255));
         jButton11.setForeground(new java.awt.Color(0, 0, 0));
@@ -345,6 +358,12 @@ public class Registro_clientes extends javax.swing.JFrame {
             }
         });
         jPanel1.add(jButton11, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 290, 120, -1));
+
+        comboPuesto.setBackground(new java.awt.Color(102, 102, 102));
+        comboPuesto.setFont(new java.awt.Font("Dialog", 0, 14)); // NOI18N
+        comboPuesto.setForeground(new java.awt.Color(255, 255, 255));
+        comboPuesto.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Puesto" }));
+        jPanel1.add(comboPuesto, new org.netbeans.lib.awtextra.AbsoluteConstraints(460, 250, 130, 30));
 
         getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 30, 610, 340));
 
@@ -400,50 +419,43 @@ public class Registro_clientes extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-       
+
     }//GEN-LAST:event_jButton1ActionPerformed
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
-      
+
     }//GEN-LAST:event_jButton2ActionPerformed
 
     private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
-     
+
     }//GEN-LAST:event_jButton3ActionPerformed
 
     private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton4ActionPerformed
-        
+
     }//GEN-LAST:event_jButton4ActionPerformed
 
     private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton5ActionPerformed
-    this.dispose();
-    new Menu().setVisible(true);
+        this.dispose();
+        new Menu().setVisible(true);
     }//GEN-LAST:event_jButton5ActionPerformed
 
     private void jButton9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton9ActionPerformed
-        
-        Cliente cl =new Cliente();
-        
-        
-        if( cedulatxt.getText().equals("") ||nombretxt.getText().equals("")||  apellidotxt.getText().equals("") ||
-                correotxt.getText().equals("")||telefonotxt.getText().equals("")){
-            JOptionPane.showMessageDialog(null,"Accion Invalida, ingrese todos los datos");
-        }else{
-        cl.setCedula(cedulatxt.getText());
-        cl.setNombre(nombretxt.getText());
-        cl.setApellidos(apellidotxt.getText());
-        cl.setCorreo(correotxt.getText());
-        cl.setTelefono(telefonotxt.getText());
-        insertarCliente(cl);
-        
+
+     
+
+        if ( nombretxt.getText().equals("") || apellidotxt.getText().equals("")
+                || correotxt.getText().equals("") ) {
+            JOptionPane.showMessageDialog(null, "Accion Invalida, ingrese todos los datos");
+        } else {
+           insertarEntrenador();
+            
+            
+
         }
         limpiar();
         llenarTabla();
-        
-        
-        
 
-        
+
     }//GEN-LAST:event_jButton9ActionPerformed
 
     private void jButton9MouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButton9MouseEntered
@@ -460,12 +472,6 @@ public class Registro_clientes extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_nombretxtActionPerformed
 
-    private void cedulatxtMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_cedulatxtMouseClicked
-      
-        cedulatxt.setText("");
-// TODO add your handling code here:
-    }//GEN-LAST:event_cedulatxtMouseClicked
-
     private void nombretxtMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_nombretxtMouseClicked
         // TODO add your handling code here:
         nombretxt.setText("");
@@ -473,22 +479,13 @@ public class Registro_clientes extends javax.swing.JFrame {
 
     private void apellidotxtMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_apellidotxtMouseClicked
         // TODO add your handling code here:
-         apellidotxt.setText("");
+        apellidotxt.setText("");
     }//GEN-LAST:event_apellidotxtMouseClicked
 
     private void correotxtMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_correotxtMouseClicked
-       correotxt.setText("");
-       // TODO add your handling code here:
+        correotxt.setText("");
+        // TODO add your handling code here:
     }//GEN-LAST:event_correotxtMouseClicked
-
-    private void telefonotxtActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_telefonotxtActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_telefonotxtActionPerformed
-
-    private void telefonotxtMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_telefonotxtMouseClicked
-        // TODO add your handling code here:
-        telefonotxt.setText("");
-    }//GEN-LAST:event_telefonotxtMouseClicked
 
     private void jButton10MouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButton10MouseEntered
         // TODO add your handling code here:
@@ -500,28 +497,19 @@ public class Registro_clientes extends javax.swing.JFrame {
 
     private void jButton10ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton10ActionPerformed
         // TODO add your handling code here:
-        Cliente cl =new Cliente();
-        
-        
-        if( cedulatxt.getText().equals("") ||nombretxt.getText().equals("")||  apellidotxt.getText().equals("") ||
-                correotxt.getText().equals("")||telefonotxt.getText().equals("")){
-            JOptionPane.showMessageDialog(null,"Accion Invalida, ingrese todos los datos");
-        }else{
-        cl.setCedula(cedulatxt.getText());
-        cl.setNombre(nombretxt.getText());
-        cl.setApellidos(apellidotxt.getText());
-        cl.setCorreo(correotxt.getText());
-        cl.setTelefono(telefonotxt.getText());
-        actualizarCliente(cl);
-        JOptionPane.showMessageDialog(null,"Información actualizada con exito","",JOptionPane.INFORMATION_MESSAGE);
-        limpiar();
-        llenarTabla();
-        }
-        
-        
-        
+        Cliente cl = new Cliente();
 
-        
+        if (nombretxt.getText().equals("") || apellidotxt.getText().equals("")
+                || correotxt.getText().equals("") ) {
+            JOptionPane.showMessageDialog(null, "Accion Invalida, ingrese todos los datos");
+        } else {
+            
+            actualizarEntrenador();
+            limpiar();
+            llenarTabla();
+        }
+
+
     }//GEN-LAST:event_jButton10ActionPerformed
 
     private void jButton11MouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButton11MouseEntered
@@ -533,27 +521,17 @@ public class Registro_clientes extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton11MouseExited
 
     private void jButton11ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton11ActionPerformed
-        Cliente cl =new Cliente();
-        if( cedulatxt.getText().equals("")){
-            JOptionPane.showMessageDialog(null,"Accion Invalida, ingrese la cedula de un cliente");
-        }else{
-        cl.setCedula(cedulatxt.getText());
-        cl.setNombre(nombretxt.getText());
-        cl.setApellidos(apellidotxt.getText());
-        cl.setCorreo(correotxt.getText());
-        cl.setTelefono(telefonotxt.getText());
-        eliminarCliente(cl);
-        JOptionPane.showMessageDialog(null,"Registro eliminado","",JOptionPane.INFORMATION_MESSAGE);
-        limpiar();
-        llenarTabla();
-        }
+       eliminarEntrenador();
+            limpiar();
+            llenarTabla();
+        
 
         // TODO add your handling code here:
     }//GEN-LAST:event_jButton11ActionPerformed
 
-
-
-
+    private void correotxtActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_correotxtActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_correotxtActionPerformed
 
     public static void main(String args[]) {
         /* Set the Nimbus look and feel */
@@ -569,9 +547,9 @@ public class Registro_clientes extends javax.swing.JFrame {
                 }
             }
         } catch (ClassNotFoundException ex) {
-            
+
         } catch (InstantiationException ex) {
-            
+
         } catch (IllegalAccessException ex) {
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
         }
@@ -588,7 +566,7 @@ public class Registro_clientes extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JTextField apellidotxt;
     private javax.swing.ButtonGroup buttonGroup1;
-    private javax.swing.JTextField cedulatxt;
+    private javax.swing.JComboBox<String> comboPuesto;
     private javax.swing.JTextField correotxt;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton10;
@@ -608,6 +586,5 @@ public class Registro_clientes extends javax.swing.JFrame {
     private javax.swing.JToggleButton jToggleButton1;
     private javax.swing.JToolBar jToolBar1;
     private javax.swing.JTextField nombretxt;
-    private javax.swing.JTextField telefonotxt;
     // End of variables declaration//GEN-END:variables
 }
